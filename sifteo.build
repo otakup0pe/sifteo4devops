@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<project name="sifteo4devops">
+  <property name="project.version" value="1.0" />
+  <property name="project.config" value="release" />
+
+  <target name="init">
+    <call target="${project.config}" />
+  </target>
+
+  <target name="debug">
+    <property name="project.config" value="debug" />
+    <property name="build.debug" value="true" />
+    <property name="basedir.suffix" value="-debug" />
+  </target>
+
+  <target name="release">
+    <property name="project.config" value="release" />
+    <property name="build.debug" value="false" />
+    <property name="basedir.suffix" value="-release" />
+  </target>
+
+  <target name="build" depends="init" description="compiles the source code">
+    <property name="build.dir" value="${nant.project.basedir}/${nant.project.name}_${project.version}${basedir.suffix}"/>
+    <mkdir dir="${build.dir}" />
+    <csc target="exe" output="${build.dir}/Sifteo4Devops.exe" debug="${build.debug}">
+      <sources>
+        <includes name="sifteo4devops/*.cs" />
+      </sources>
+    </csc>
+  </target>
+</project>
