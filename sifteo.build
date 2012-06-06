@@ -19,12 +19,18 @@
     <property name="basedir.suffix" value="-release" />
   </target>
 
+
   <target name="build" depends="init" description="compiles the source code">
     <property name="build.dir" value="${nant.project.basedir}/${nant.project.name}_${project.version}${basedir.suffix}"/>
     <mkdir dir="${build.dir}" />
     <csc target="exe" output="${build.dir}/Sifteo4Devops.exe" debug="${build.debug}">
+      <references>
+        <include name="lib/Sifteo.dll" />
+        <include name="lib/JsonFx.dll" />
+      </references>
+
       <sources>
-        <includes name="sifteo4devops/*.cs" />
+        <include name="sifteo4devops/*.cs" />
       </sources>
     </csc>
   </target>
