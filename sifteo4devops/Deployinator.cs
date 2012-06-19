@@ -18,6 +18,7 @@ namespace sifteo4devops
           int CurrentFade = 0;
 
           Dictionary<Cube, JenkinsJob> CubeJobs;
+		Dictionary<Cube, DoomGuy> CubeDooms;
 
           ButtonEventHandler OnSelectButton;
 
@@ -26,10 +27,13 @@ namespace sifteo4devops
                Config = new Config();
                Jenkins = new Jenkins(Config.BaseJenkinsURL);
                CubeJobs = new Dictionary<Cube, JenkinsJob>();
+			CubeDooms = new Dictionary<Cube, DoomGuy>();
                OnSelectButton = new ButtonEventHandler(SelectButtonClick);
                for ( int i = 0 ; i < this.CubeSet.Count ; i ++ )
                     {
                          this.CubeSet[i].ButtonEvent += OnSelectButton;
+					CubeDooms.Add(this.CubeSet[i], new DoomGuy());
+					this.CubeSet[i].FillScreen(Color.White);
                     }
           }
 
@@ -93,7 +97,14 @@ namespace sifteo4devops
                int ActiveCubes = CycleCubes.Count;
                int ActiveJobs = this.Jenkins.Count();
                Log.Debug("updating " + ActiveJobs.ToString() + "(" + this.LastJob.ToString() + ") jobs across " + ActiveCubes.ToString() + " cubes");
-               int JobInc = this.LastJob;
+			
+			Log.Debug(this.LastJob.ToString() + " vs " + ActiveJobs.ToString() );
+			if ( this.LastJob >= ActiveJobs )
+				{
+					this.LastJob = 0;
+				}
+			int JobInc = this.LastJob;
+		
                CubeJobs.Clear();
                for ( int i = 0; i < ActiveCubes ; i ++ )
                     {
@@ -101,7 +112,6 @@ namespace sifteo4devops
                          if ( i + this.LastJob >= ActiveJobs )
                               {
                                    DrawBlankCube(c);
-                                   JobInc = 0;
                               }
                          else
                               {
@@ -109,29 +119,51 @@ namespace sifteo4devops
                                    Log.Debug("updating job " + j.GetName() + " on " + c.UniqueId);
                                    DrawJobCube(c, j, Config.EnabledJobColor);
                                    CubeJobs.Add(c, j);
-                                   JobInc = i;
+                                   JobInc += 1;
                               }
                          c.Paint();
                     }
-               if ( ActiveCubes < ActiveJobs )
-                    {
-                         this.LastJob = JobInc + 1;
-                    }
+			this.LastJob = JobInc;
           }
 
           private void DrawBlankCube(Cube c)
           {
-               c.FillScreen(Color.White);
+			c.FillScreen(Color.White);
                c.Image("difficulties", 0, 16, 0, 0);
+			CubeDooms[c].Draw(c, DoomGuy.Face.None, DoomGuy.FaceStatus.None, 0, 0);
           }
 
           private void DrawJobCube(Cube c, JenkinsJob j, Color Col)
           {
-               c.FillScreen(Col);
-               Util.DrawString(c, 0, 0, "Job:" + j.GetName());
-               Util.DrawString(c, 0, 10, "Score:" + j.GetScore().ToString());
-               Util.DrawString(c, 0, 20, "Last Success:" + j.GetLastSuccess().ToString());
-               Util.DrawString(c, 0, 30, "Last Fail:" + j.GetLastFail().ToString());
+			c.FillScreen(Color.White);
+               Util.DrawString(c, 5, 5, "Job:" + j.GetName());
+               Util.DrawString(c, 5, 15, "Score:" + j.GetScore().ToString());
+               Util.DrawString(c, 5, 25, "Last Success:" + j.GetLastSuccess().ToString());
+               Util.DrawString(c, 5, 35, "Last Fail:" + j.GetLastFail().ToString());
+			if ( j.GetScore() == 100 )
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.Health1, DoomGuy.FaceStatus.Normal, 5, 50);
+				}
+			else if ( j.GetScore() >= 80 )
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.Health2, DoomGuy.FaceStatus.Normal, 5, 50);
+				}
+			else if ( j.GetScore() >= 50 )
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.Health3, DoomGuy.FaceStatus.Normal, 5, 50);
+				}
+			else if ( j.GetScore() >= 30 )
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.Health4, DoomGuy.FaceStatus.Normal, 5, 50);
+				}
+			else if ( j.GetScore() >= 0 )
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.Health5, DoomGuy.FaceStatus.Normal, 5, 50);					
+				}
+			else
+				{
+					CubeDooms[c].Draw(c, DoomGuy.Face.GameOver, DoomGuy.FaceStatus.Normal, 5, 50);
+				}
           }
      }
 }

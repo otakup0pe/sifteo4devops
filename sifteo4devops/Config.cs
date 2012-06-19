@@ -6,6 +6,7 @@ namespace sifteo4devops
 	public class Config
 	{
 		public string BaseJenkinsURL = "http://monolith.eghetto.intra:8080/";
+//		public string BaseJenkinsURL = "http://jenkins.cotweet.com/";
 		public string BaseZenossURL = "http://neuromancer.catghetto.home:8080/";
 		public int CycleEvery = 5;
 

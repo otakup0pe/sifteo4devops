@@ -1,10 +1,10 @@
 {
 	"app": {
-		"title": "Game",
-		"version": "0.0.1",
+		"title": "Sifteo4Devops",
+		"version": "0.0.2",
 		"runtime": "executable",
 		"server": "127.0.0.1:7000",
-		"description": "A freshly generated game.",
+		"description": "Yes I really did.",
 		"appModule": "UNUSED",
 		"coverArt": "cover.png",
 	    "requiredSiftCount" : 3,
