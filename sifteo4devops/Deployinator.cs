@@ -6,164 +6,198 @@ namespace sifteo4devops
 {
      public class Deployinator : BaseApp
      {
-          Jenkins Jenkins;
-          static Config Config;
+
+          public static Jenkins Jenkins;
+          public static Zenoss Zenoss;
+          public static Config Config;
 
           private DateTime LastCycleJobs;
           private DateTime LastSelectedJob;
 
+          private SetupCube SetupCube = null;
+
+          private List<string> FlippedCubes;
+          private Dictionary<string, DateTime> ButtonPressed;
+
           int LastJob = 0;
+          int LastGroup = 0;
 
-          Cube SelectedCube;
-          int CurrentFade = 0;
+          int Score = 0;
 
-          Dictionary<Cube, JenkinsJob> CubeJobs;
-		Dictionary<Cube, DoomGuy> CubeDooms;
+          Dictionary<Cube, Object> Displays;
+          Dictionary<Cube, DoomGuy> CubeDooms;
 
-          ButtonEventHandler OnSelectButton;
+          ButtonEventHandler OnButton;
+          FlipEventHandler OnFlip;
+          TiltEventHandler OnTilt;
 
           override public void Setup()
           {
-               Config = new Config();
-               Jenkins = new Jenkins(Config.BaseJenkinsURL);
-               CubeJobs = new Dictionary<Cube, JenkinsJob>();
-			CubeDooms = new Dictionary<Cube, DoomGuy>();
-               OnSelectButton = new ButtonEventHandler(SelectButtonClick);
+               SetupCube = new SetupCube();
+               Displays = new Dictionary<Cube, Object>();
+               CubeDooms = new Dictionary<Cube, DoomGuy>();
+               FlippedCubes = new List<string>();
+               ButtonPressed = new Dictionary<string, DateTime>();
+               OnButton = new ButtonEventHandler(DoButton);
+               OnFlip = new FlipEventHandler(DoFlip);
+               OnTilt = new TiltEventHandler(DoTilt);
                for ( int i = 0 ; i < this.CubeSet.Count ; i ++ )
                     {
-                         this.CubeSet[i].ButtonEvent += OnSelectButton;
-					CubeDooms.Add(this.CubeSet[i], new DoomGuy());
-					this.CubeSet[i].FillScreen(Color.White);
+                         this.CubeSet[i].ButtonEvent += OnButton;
+                         this.CubeSet[i].TiltEvent += OnTilt;
+                         this.CubeSet[i].FlipEvent += OnFlip;
+                         CubeDooms.Add(this.CubeSet[i], new DoomGuy());
+                         this.CubeSet[i].FillScreen(Color.White);
                     }
           }
 
-          public void SelectButtonClick(Cube c, bool pressed)
+          public void DoButton(Cube c, bool pressed)
           {
-			if ( pressed && SelectedCube == c )
-				{
-					Log.Debug(c.UniqueId + " unselected");
-					this.SelectedCube = null;
-					this.CurrentFade = 0;
-				}
-
-               else if ( pressed && SelectedCube == null )
+               if ( FlippedCubes.Count == this.CubeSet.Count - 1 )
                     {
-                         Log.Debug(c.UniqueId + " pressed eh");
-                         if ( this.CubeJobs.ContainsKey(c) )
+                         if ( pressed )
                               {
-                                   Log.Debug(c.UniqueId + " selected");
-                                   this.SelectedCube = c;
+                                   SetupCube.Cube = c;
                               }
-                    }
-          }
-
-          override public void Tick()
-          {
-               if ( SelectedCube == null )
-                    {
-                         TimeSpan span = DateTime.Now - LastCycleJobs;
-                         if ( span.Seconds > Config.CycleEvery )
+                         else
                               {
-                                   CycleJobs();
-                                   LastCycleJobs = DateTime.Now;
+                                   SetupCube.Cube = null;
                               }
                     }
                else
                     {
-                         TimeSpan span = DateTime.Now - LastSelectedJob;
-                         if ( span.Milliseconds > 100 )
+                         if ( SetupCube.Cube != null )
                               {
-                                   if ( CurrentFade >= 255 )
-                                        {
-                                             CurrentFade = 0;
-                                        }
-                                   int c = CurrentFade;
-                                   Color col = new Color(255, c, c);
-                                   DrawJobCube(this.SelectedCube, CubeJobs[SelectedCube], col);
-                                   this.SelectedCube.Paint();
-                                   CurrentFade += 32;
+                                   SetupCube.Cube = null;
                               }
                     }
+               if ( pressed )
+                    {
+                         if ( ! this.ButtonPressed.ContainsKey(c.UniqueId) )
+                              {
+                                   this.ButtonPressed.Add(c.UniqueId, DateTime.Now);
+                              }
+                    }
+               else
+                    {
+                         if ( this.ButtonPressed.ContainsKey(c.UniqueId) )
+                              {
+                                   this.ButtonPressed.Remove(c.UniqueId);
+                              }
+                    }
+               Log.Debug("A CLICK -> " + c.UniqueId.ToString() + " : " + pressed.ToString());
           }
 
+          public void DoFlip(Cube c, bool isUp)
+          {
+
+               if ( ! isUp )
+                    {
+                         if ( ! FlippedCubes.Contains(c.UniqueId) )
+                              {
+                                   FlippedCubes.Add(c.UniqueId);
+                              }
+                    }
+               else
+                    {
+                         if ( FlippedCubes.Contains(c.UniqueId) )
+                              {
+                                   FlippedCubes.Remove(c.UniqueId);
+                              }
+                    }
+               Log.Debug("A FLIP -> " + c.UniqueId + " : " + isUp.ToString() + " " + FlippedCubes.Count.ToString() + " flipped");
+          }
+
+          public void DoTilt(Cube c, int x, int y, int z)
+          {
+               Log.Debug("A TILT -> " + c.UniqueId.ToString() + " : " + x.ToString() + "," + y.ToString() + "," + z.ToString());
+          }
+
+          override public void Tick()
+          {
+			TimeSpan span = DateTime.Now - LastCycleJobs;
+			if ( SetupCube.Cube != null )
+				{
+					if ( this.FlippedCubes.Count == this.CubeSet.Count - 1 && this.ButtonPressed.Count == 1 )
+						{
+							SetupCube.Tick();
+						}
+				}
+			else
+				{
+					if ( span.Seconds > Config.CycleEvery )
+						{
+							CycleJobs();
+							LastCycleJobs = DateTime.Now;
+						}
+				}
+		}
+			
           static void Main(string[] args)
           {
+			Config = new Config();
+               Jenkins = new Jenkins();
+               Zenoss = new Zenoss();
+
                new Deployinator().Run();
           }
 
           private void CycleJobs()
           {
-               CubeSet CycleCubes = this.CubeSet;
-               int ActiveCubes = CycleCubes.Count;
-               int ActiveJobs = this.Jenkins.Count();
-               Log.Debug("updating " + ActiveJobs.ToString() + "(" + this.LastJob.ToString() + ") jobs across " + ActiveCubes.ToString() + " cubes");
-			
-			Log.Debug(this.LastJob.ToString() + " vs " + ActiveJobs.ToString() );
-			if ( this.LastJob >= ActiveJobs )
-				{
-					this.LastJob = 0;
-				}
-			int JobInc = this.LastJob;
-		
-               CubeJobs.Clear();
-               for ( int i = 0; i < ActiveCubes ; i ++ )
+               Log.Debug("updating jenkins jobs : " + Deployinator.Jenkins.Count().ToString() + "(" + this.LastJob.ToString() + ") zenoss groups : " + Deployinator.Zenoss.Count().ToString() + "(" + this.LastGroup.ToString() + ") across " + this.CubeSet.Count.ToString() + " cubes");
+
+               if ( this.LastJob >= Deployinator.Jenkins.Count() )
                     {
-                         Cube c = CycleCubes[i];
-                         if ( i + this.LastJob >= ActiveJobs )
-                              {
-                                   DrawBlankCube(c);
-                              }
-                         else
-                              {
-                                   JenkinsJob j = Jenkins.Job(i + this.LastJob);
-                                   Log.Debug("updating job " + j.GetName() + " on " + c.UniqueId);
-                                   DrawJobCube(c, j, Config.EnabledJobColor);
-                                   CubeJobs.Add(c, j);
-                                   JobInc += 1;
-                              }
-                         c.Paint();
+                         this.LastJob = 0;
                     }
-			this.LastJob = JobInc;
+               if ( this.LastGroup >= Deployinator.Zenoss.Count() )
+                    {
+                         this.LastGroup = 0;
+                    }
+
+               Displays.Clear();
+
+               for ( int i = 0; i < this.CubeSet.Count ; i ++ )
+
+                    {
+                         Cube c = this.CubeSet[i];
+                         if ( ! FlippedCubes.Contains(c.UniqueId) )
+                              {
+                                   DrawCube(c);
+                              }
+                    }
           }
 
+          private void DrawCube(Cube c)
+          {
+               CubeDooms[c].Reset();
+               Random r = new Random();
+               int b = r.Next(2);
+               if ( b == 0 && this.LastJob < Deployinator.Jenkins.Count() )
+                    {
+                         JenkinsJob j = Deployinator.Jenkins.Job(this.LastJob);
+                         j.Draw(c, CubeDooms[c]);
+                         this.LastJob = this.LastJob + 1;
+                         this.Displays[c] = j;
+                    }
+               else if ( b == 1 && this.LastGroup < Deployinator.Zenoss.Count() )
+                    {
+                         ZenossGroup k = Deployinator.Zenoss.Group(this.LastGroup);
+                         k.Draw(c, CubeDooms[c]);
+                         this.LastGroup = this.LastGroup + 1;
+                         this.Displays[c] = k;
+                    }
+               else
+                    {
+                         DrawBlankCube(c);
+                    }
+               c.Paint();
+
+          }
           private void DrawBlankCube(Cube c)
           {
-			c.FillScreen(Color.White);
+               c.FillScreen(Color.White);
                c.Image("difficulties", 0, 16, 0, 0);
-			CubeDooms[c].Draw(c, DoomGuy.Face.None, DoomGuy.FaceStatus.None, 0, 0);
-          }
-
-          private void DrawJobCube(Cube c, JenkinsJob j, Color Col)
-          {
-			c.FillScreen(Color.White);
-               Util.DrawString(c, 5, 5, "Job:" + j.GetName());
-               Util.DrawString(c, 5, 15, "Score:" + j.GetScore().ToString());
-               Util.DrawString(c, 5, 25, "Last Success:" + j.GetLastSuccess().ToString());
-               Util.DrawString(c, 5, 35, "Last Fail:" + j.GetLastFail().ToString());
-			if ( j.GetScore() == 100 )
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.Health1, DoomGuy.FaceStatus.Normal, 5, 50);
-				}
-			else if ( j.GetScore() >= 80 )
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.Health2, DoomGuy.FaceStatus.Normal, 5, 50);
-				}
-			else if ( j.GetScore() >= 50 )
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.Health3, DoomGuy.FaceStatus.Normal, 5, 50);
-				}
-			else if ( j.GetScore() >= 30 )
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.Health4, DoomGuy.FaceStatus.Normal, 5, 50);
-				}
-			else if ( j.GetScore() >= 0 )
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.Health5, DoomGuy.FaceStatus.Normal, 5, 50);					
-				}
-			else
-				{
-					CubeDooms[c].Draw(c, DoomGuy.Face.GameOver, DoomGuy.FaceStatus.Normal, 5, 50);
-				}
           }
      }
 }

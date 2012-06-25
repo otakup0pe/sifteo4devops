@@ -15,17 +15,49 @@ namespace sifteo4devops
           protected int LastFail;
           protected int Score;
 
-          private string URL;
-
           private Timer RefreshTimer;
           private TimerCallback RefreshCallback;
 
-          public JenkinsJob(string BaseURL, string Name)
+		public void Draw(Cube c, DoomGuy g)
+		{
+			c.FillScreen(Color.White);
+               Util.DrawString(c, 5, 5, "Job:" + this.Name);
+               Util.DrawString(c, 5, 15, "Score:" + this.Score.ToString());
+               Util.DrawString(c, 5, 25, "Last Success:" + this.LastSuccess.ToString());
+			Util.DrawString(c, 5, 35, "Last Fail:" + this.LastFail.ToString());
+
+			c.Image("jenkins", 5, 60, 0, 0, 32, 44);
+ 			if ( this.Score == 100 )
+				{
+					g.Draw(c, DoomGuy.Face.Health1, DoomGuy.FaceStatus.Normal, 50, 60);
+				}
+			else if ( this.Score >= 80 )
+				{
+					g.Draw(c, DoomGuy.Face.Health2, DoomGuy.FaceStatus.Normal, 50, 60);
+				}
+			else if ( this.Score >= 60 )
+				{
+					g.Draw(c, DoomGuy.Face.Health3, DoomGuy.FaceStatus.Normal, 50, 60);
+				}
+			else if ( this.Score >= 30 )
+				{
+					g.Draw(c, DoomGuy.Face.Health4, DoomGuy.FaceStatus.Normal, 50, 60);
+				}
+			else if ( this.Score > 0 )
+				{
+					g.Draw(c, DoomGuy.Face.Health5, DoomGuy.FaceStatus.Normal, 50, 60);					
+				}
+			else
+				{
+					g.Draw(c, DoomGuy.Face.GameOver, DoomGuy.FaceStatus.Normal, 50, 60);
+				}
+		}
+		
+          public JenkinsJob(string Name)
           {
                this.Name = Name;
-               this.URL = BaseURL + "job/" + Name + "/api/json";
                RefreshCallback = this.Refresh;
-               Log.Info("New jenkins job " + Name + " url is " + this.URL);
+               Log.Info("New jenkins job " + Name);
                this.RefreshTimer = new Timer(RefreshCallback, null, 0, 60 * 1000);
           }
 
@@ -64,7 +96,7 @@ namespace sifteo4devops
 
           public bool Request()
           {
-               HttpWebRequest JobReq = (HttpWebRequest)WebRequest.Create(this.URL);
+               HttpWebRequest JobReq = (HttpWebRequest)WebRequest.Create(Deployinator.Config.JenkinsUrl + "job/" + this.Name + "/api/json");
                HttpWebResponse JobResp = (HttpWebResponse)JobReq.GetResponse();
                if (JobResp.StatusCode == System.Net.HttpStatusCode.OK)
                     {
@@ -142,7 +174,6 @@ namespace sifteo4devops
      public class Jenkins
      {
           private List<JenkinsJob> Jobs;
-          private string BaseURL;
 
           private Timer RefreshTimer;
           private TimerCallback RefreshCallback;
@@ -157,11 +188,9 @@ namespace sifteo4devops
 			return Jobs[i];
 		}
 
-          public Jenkins (string BaseURL)
+          public Jenkins ()
           {
-               this.BaseURL = BaseURL;
                this.Jobs = new List<JenkinsJob>();
-               Log.Info("Using jenkins url of " + this.BaseURL);
                RefreshCallback = this.Refresh;
                this.RefreshTimer = new Timer(RefreshCallback, null, 0, 300 * 1000);
           }
@@ -174,7 +203,7 @@ namespace sifteo4devops
                          String Job = JobList[i];
                          if ( ! isJob(Job) )
                               {
-                                   this.Jobs.Add(new JenkinsJob(BaseURL, Job));
+                                   this.Jobs.Add(new JenkinsJob(Job));
                               }
                     }
 
@@ -195,7 +224,7 @@ namespace sifteo4devops
           private List<string> JobList()
           {
                List<string> Jobs = new List<string>();
-               string URL = this.BaseURL + "/api/json";
+               string URL = Deployinator.Config.JenkinsUrl + "/api/json";
                Log.Info("requesting " + URL);
                HttpWebRequest Req = (HttpWebRequest)WebRequest.Create(URL);
                HttpWebResponse Resp = (HttpWebResponse)Req.GetResponse();

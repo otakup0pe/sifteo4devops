@@ -11,8 +11,19 @@ namespace sifteo4devops
           public int X;
           public int Y;
      }
+	class SirenState
+	{
+		public int Step;
+		public int X;
+		public int Y;
+	}
      public class Util
      {
+		public static bool AcceptAllCertifications(object sender, System.Security.Cryptography.X509Certificates.X509Certificate certification, System.Security.Cryptography.X509Certificates.X509Chain chain, System.Net.Security.SslPolicyErrors sslPolicyErrors)
+		{
+			return true;
+		}
+
           public static void DrawString(Cube c, int x, int y, String s)
           {
                int cur_x = x, cur_y = y;
@@ -56,6 +67,16 @@ namespace sifteo4devops
 
           private Face CurrentFace;
 
+		public void Reset()
+		{
+			this.CurrentFace = Face.None;
+			this.FaceAnimState = -1;
+			if ( this.FaceAnimTimer != null )
+				{
+					this.FaceAnimTimer.Dispose();
+				}
+		}
+
           private void FaceAnim(Object Odgs)
           {
                DoomGuyState dgs = (DoomGuyState) Odgs;
@@ -95,10 +116,9 @@ namespace sifteo4devops
                int PicY = 0;
                int PicH = 67;
                int PicW = 53;
-               if ( FaceAnimTimer != null )
-                    {
-                         this.FaceAnimTimer.Dispose();
-                    }
+
+			this.Reset();
+
                if ( F != Face.None )
                     {
                          if ( F == Face.Health1 )
@@ -135,7 +155,7 @@ namespace sifteo4devops
                               {
                                    throw new System.ArgumentException("Invalid Argument Face");
                               }
-                         if ( F != Face.GameOver || F != Face.OhYes )
+                         if ( F != Face.GameOver && F != Face.OhYes )
                               {
                                    if ( FS == FaceStatus.Normal )
                                         {

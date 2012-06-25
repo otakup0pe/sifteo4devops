@@ -27,6 +27,7 @@
       <references>
         <include name="lib/Sifteo.dll" />
         <include name="lib/JsonFx.dll" />
+	<include name="lib/Nini.dll" />
       </references>
 
       <sources>
