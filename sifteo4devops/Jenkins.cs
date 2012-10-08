@@ -87,10 +87,10 @@ namespace sifteo4devops
                     {
                          Log.Error("unable to refresh jenkins job " + Name);
                     }
-               else
+	       /*else
                     {
                          Log.Debug("Job:" + this.Name + " Score:" + this.Score.ToString());
-                    }
+                    }*/
 
           }
 
